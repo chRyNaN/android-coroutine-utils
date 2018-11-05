@@ -9,6 +9,7 @@ import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.TextView
 import com.chrynan.accore.currentScopeJob
+import com.chrynan.accore.runInBackground
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BroadcastChannel
 import kotlinx.coroutines.channels.Channel
@@ -29,8 +30,12 @@ suspend fun EditText.onTextChanged(block: suspend CoroutineScope.(TextChangeEven
             eventChannel.cancel()
         }
 
-        while (isActive and !eventChannel.isClosedForReceive) {
-            block(eventChannel.receive())
+        val context = coroutineContext
+
+        runInBackground {
+            while (isActive and !eventChannel.isClosedForReceive) {
+                withContext(context) { block(eventChannel.receive()) }
+            }
         }
     }
 
@@ -48,8 +53,12 @@ suspend fun EditText.afterTextChanged(block: suspend CoroutineScope.(TextChangeE
             eventChannel.cancel()
         }
 
-        while (isActive and !eventChannel.isClosedForReceive) {
-            block(eventChannel.receive())
+        val context = coroutineContext
+
+        runInBackground {
+            while (isActive and !eventChannel.isClosedForReceive) {
+                withContext(context) { block(eventChannel.receive()) }
+            }
         }
     }
 
@@ -67,8 +76,12 @@ suspend fun EditText.beforeTextChanged(block: suspend CoroutineScope.(TextChange
             eventChannel.cancel()
         }
 
-        while (isActive and !eventChannel.isClosedForReceive) {
-            block(eventChannel.receive())
+        val context = coroutineContext
+
+        runInBackground {
+            while (isActive and !eventChannel.isClosedForReceive) {
+                withContext(context) { block(eventChannel.receive()) }
+            }
         }
     }
 
@@ -237,8 +250,12 @@ suspend fun TextView.onEnterAction(block: suspend CoroutineScope.(EditorActionEv
         eventChannel.cancel()
     }
 
-    while (isActive and !eventChannel.isClosedForReceive) {
-        block(eventChannel.receive())
+    val context = coroutineContext
+
+    runInBackground {
+        while (isActive and !eventChannel.isClosedForReceive) {
+            withContext(context) { block(eventChannel.receive()) }
+        }
     }
 }
 
