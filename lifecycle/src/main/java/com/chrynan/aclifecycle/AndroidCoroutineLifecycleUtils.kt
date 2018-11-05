@@ -3,6 +3,7 @@
 package com.chrynan.aclifecycle
 
 import android.app.Activity
+import android.app.DialogFragment
 import android.app.Fragment
 import android.app.Service
 import android.os.Bundle
@@ -91,6 +92,38 @@ abstract class CoroutineFragment : Fragment(),
 }
 
 abstract class CoroutineAppCompatFragment : android.support.v4.app.Fragment(),
+    BaseCoroutineScope {
+
+    override lateinit var job: Job
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        job = Job()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        job.cancel()
+    }
+}
+
+abstract class CoroutineDialogFragment : DialogFragment(),
+    BaseCoroutineScope {
+
+    override lateinit var job: Job
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        job = Job()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        job.cancel()
+    }
+}
+
+abstract class CoroutineAppCompatDialogFragment : android.support.v4.app.DialogFragment(),
     BaseCoroutineScope {
 
     override lateinit var job: Job
