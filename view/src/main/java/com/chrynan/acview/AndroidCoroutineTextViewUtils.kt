@@ -23,7 +23,7 @@ suspend fun EditText.onTextChanged(block: suspend CoroutineScope.(TextChangeEven
 
         addTextChangedListener(textWatcher)
 
-        val eventChannel = receiveOnTextChangedEvents(textWatcher.channel)
+        val eventChannel = textWatcher.onTextChangedEvents
 
         currentScopeJob?.invokeOnCompletion {
             removeTextChangedListener(textWatcher)
@@ -46,7 +46,7 @@ suspend fun EditText.afterTextChanged(block: suspend CoroutineScope.(TextChangeE
 
         addTextChangedListener(textWatcher)
 
-        val eventChannel = receiveAfterTextChangedEvents(textWatcher.channel)
+        val eventChannel = textWatcher.afterTextChangedEvents
 
         currentScopeJob?.invokeOnCompletion {
             removeTextChangedListener(textWatcher)
@@ -69,7 +69,7 @@ suspend fun EditText.beforeTextChanged(block: suspend CoroutineScope.(TextChange
 
         addTextChangedListener(textWatcher)
 
-        val eventChannel = receiveBeforeTextChangedEvents(textWatcher.channel)
+        val eventChannel = textWatcher.beforeTextChangedEvents
 
         currentScopeJob?.invokeOnCompletion {
             removeTextChangedListener(textWatcher)
@@ -116,7 +116,7 @@ suspend fun TextView.textChangeEvents(): ReceiveChannel<TextChangeEvent> =
 
         addTextChangedListener(textWatcher)
 
-        val eventChannel = textWatcher.channel.onTextChanges()
+        val eventChannel = textWatcher.events.onTextChanges()
 
         currentScopeJob?.invokeOnCompletion {
             removeTextChangedListener(textWatcher)
@@ -192,10 +192,21 @@ suspend fun ReceiveChannel<TextChangeEvent>.onTextChanges(): ReceiveChannel<Text
 @ExperimentalCoroutinesApi
 class CoroutineChannelTextWatcher(channelQueueCapacity: Int = Channel.CONFLATED) : TextWatcher {
 
-    val channel: ReceiveChannel<TextChangeEvent>
+    val events: ReceiveChannel<TextChangeEvent>
         get() = broadcastChannel.openSubscription()
+    val onTextChangedEvents: ReceiveChannel<TextChangeEvent.OnTextChanged>
+        get() = onTextChangedBroadcastChannel.openSubscription()
+    val beforeTextChangedEvents: ReceiveChannel<TextChangeEvent.BeforeTextChanged>
+        get() = beforeTextChangedBroadcastChannel.openSubscription()
+    val afterTextChangedEvents: ReceiveChannel<TextChangeEvent.AfterTextChanged>
+        get() = afterTextChangedBroadcastChannel.openSubscription()
 
     private val broadcastChannel = BroadcastChannel<TextChangeEvent>(channelQueueCapacity)
+    private val onTextChangedBroadcastChannel = BroadcastChannel<TextChangeEvent.OnTextChanged>(channelQueueCapacity)
+    private val beforeTextChangedBroadcastChannel =
+        BroadcastChannel<TextChangeEvent.BeforeTextChanged>(channelQueueCapacity)
+    private val afterTextChangedBroadcastChannel =
+        BroadcastChannel<TextChangeEvent.AfterTextChanged>(channelQueueCapacity)
 
     override fun afterTextChanged(s: Editable) {
         send { TextChangeEvent.AfterTextChanged(editable = s) }
@@ -212,6 +223,9 @@ class CoroutineChannelTextWatcher(channelQueueCapacity: Int = Channel.CONFLATED)
     private fun send(block: () -> TextChangeEvent) =
         try {
             val event = block()
+            if (event is TextChangeEvent.OnTextChanged) onTextChangedBroadcastChannel.offer(event)
+            if (event is TextChangeEvent.BeforeTextChanged) beforeTextChangedBroadcastChannel.offer(event)
+            if (event is TextChangeEvent.AfterTextChanged) afterTextChangedBroadcastChannel.offer(event)
             broadcastChannel.offer(event)
         } catch (e: Exception) {
             broadcastChannel.cancel(e)
